@@ -7,8 +7,22 @@ find_package(catkin REQUIRED COMPONENTS
   dynamic_reconfigure
   cv_bridge
   darknet_ros
+  std_msgs
+  message_generation
 )
+
 find_package(OpenCV REQUIRED)
+
+add_message_files(
+  FILES 
+  Detection.msg
+  Detections.msg
+)
+
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+)
 
 if("$ENV{ROS_DISTRO}" STRGREATER "melodic")
   set(CMAKE_CXX_STANDARD 17)
@@ -22,6 +36,7 @@ generate_dynamic_reconfigure_options(
 
 catkin_package(
   DEPENDS OpenCV
+  CATKIN_DEPENDS message_runtime
 )
 
 include_directories(

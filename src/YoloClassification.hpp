@@ -6,6 +6,12 @@
 #include <opencv2/opencv.hpp>
 #include <cv_bridge/cv_bridge.h>
 
+#include "YOLO.h"
+
+#include <unistd.h>
+#include <std_msgs/String.h>
+#include <yolo_classification/Detections.h>
+
 #include <dynamic_reconfigure/server.h>
 #include <yolo_classification/DarknetConfig.h>
 
@@ -26,7 +32,13 @@ namespace yolo_classification
       void recvImage(const sensor_msgs::ImageConstPtr& msg);
       void runDarknet(const cv::Mat& raw_img, DarknetClassificationArray& darknet_bboxes);
 
+      //YOLO* mYOLO;
+
       ros::Subscriber sub_image_;
+      ros::Publisher detections_publisher;
+      ros::Publisher detected_image_publisher;
+
+      
 
       dynamic_reconfigure::Server<DarknetConfig> srv_;
       DarknetConfig cfg_;

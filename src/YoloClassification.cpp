@@ -20,6 +20,10 @@ namespace yolo_classification
 
     sub_image_ = ros::NodeHandle(cam).subscribe("image_rect_color", 1, &YoloClassification::recvImage, this);
 
+    detections_publisher = n.advertise<yolo_classification::Detections>("yolo/detections", 1);
+    
+    detected_image_publisher = n.advertise<sensor_msgs::Image>("yolo/detected_image", 1);
+
     skip_ = 0;
     namedWindow("Output", WINDOW_NORMAL);
   }
@@ -41,6 +45,8 @@ namespace yolo_classification
     DarknetClassificationArray darknet_bboxes;
     runDarknet(raw_img, darknet_bboxes);
 
+
+
     // Visualize output
     for (auto& bbox : darknet_bboxes) {
       cv::Point2d corner(std::get<0>(bbox).x, std::get<0>(bbox).y);
@@ -48,8 +54,21 @@ namespace yolo_classification
       putText(raw_img, std::get<1>(bbox), corner, FONT_HERSHEY_DUPLEX, 0.5, Scalar(255, 255, 255));
     }
 
-    imshow("Output", raw_img);
-    waitKey(1);
+    //sensor_msgs::ImagePtr img_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", raw_img).toImageMsg();
+    //detected_image_publisher.publish(img_msg);
+
+    
+    cv_bridge::CvImage cvImage;
+    cvImage.header.stamp = msg -> header.stamp;
+    cvImage.header.frame_id = "detection_image";
+    cvImage.encoding = sensor_msgs::image_encodings::BGR8;
+    cvImage.image = raw_img;
+    detected_image_publisher.publish(*cvImage.toImageMsg());
+    
+
+    //imshow("Output", raw_img);
+
+    //waitKey(1);
   }
 
   void YoloClassification::runDarknet(const Mat& raw_img, DarknetClassificationArray& darknet_bboxes)
@@ -81,11 +100,32 @@ namespace yolo_classification
         continue;
       }
 
+
+      yolo_classification::Detections detections_msg;
+      yolo_classification::Detection detection;
+
       box b = dets[i].bbox;
       int left  = (int)(image_scale_x * (b.x - 0.5 * b.w));
       int right = (int)(image_scale_x * (b.x + 0.5 * b.w));
       int top   = (int)(image_scale_y * (b.y - 0.5 * b.h));
       int bot   = (int)(image_scale_y * (b.y + 0.5 * b.h));
+
+
+
+          detection.class_id = dets[i].classes;
+          detection.xmin = left;
+          detection.xmax = right;
+          detection.ymax = top;
+          detection.ymin = bot;
+          detections_msg.detections.push_back(detection);
+
+          detections_msg.header.stamp = ros::Time::now();
+
+          detections_msg.header.frame_id = "detection";
+
+          detections_publisher.publish(detections_msg);
+
+
 
       std::tuple<Rect2d, std::string, double> candidate_bbox(Rect2d(left, top, right - left, bot - top),
                                                             std::string(COCO_CLASSES_[best_classification]),
